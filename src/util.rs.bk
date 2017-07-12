@@ -2,7 +2,7 @@ extern crate libc;
 
 use std::error::Error;
 use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc,Mutex};
 
 use boxfnonce::SendBoxFnOnce;
 
@@ -52,14 +52,12 @@ pub fn to_io_err<T: Error>(err: T) -> io::Error {
 type Callback = SendBoxFnOnce<(io::Result<Vec<u8>>,)>;
 
 pub struct OnceCallback {
-    callback: Arc<Mutex<Option<Callback>>>,
+    callback: Arc<Mutex<Option<Callback>>>
 }
 
 impl OnceCallback {
     pub fn new<F>(cb: F) -> Self
-    where
-        F: FnOnce(io::Result<Vec<u8>>),
-        F: Send + 'static,
+        where F: FnOnce(io::Result<Vec<u8>>), F: Send + 'static
     {
         let cb = Some(SendBoxFnOnce::from(cb));
         Self { callback: Arc::new(Mutex::new(cb)) }

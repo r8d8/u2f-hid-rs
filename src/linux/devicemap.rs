@@ -3,11 +3,11 @@ use std::collections::hash_map::ValuesMut;
 use std::collections::HashMap;
 use std::ffi::OsString;
 
-use ::platform::device::Device;
-use ::platform::monitor::Event;
+use platform::device::Device;
+use platform::monitor::Event;
 
 pub struct DeviceMap {
-    map: HashMap<OsString, Device>
+    map: HashMap<OsString, Device>,
 }
 
 impl DeviceMap {
@@ -22,7 +22,7 @@ impl DeviceMap {
     pub fn process_event(&mut self, event: Event) {
         match event {
             Event::Add(path) => self.add(path),
-            Event::Remove(path) => self.remove(path)
+            Event::Remove(path) => self.remove(path),
         }
     }
 

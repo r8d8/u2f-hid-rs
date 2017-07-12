@@ -1,12 +1,13 @@
 use rand::{thread_rng, Rng};
 use std::collections::hash_map::ValuesMut;
 use std::collections::HashMap;
+use std::ffi::OsString;
 
-use platform::device::Device;
-use platform::monitor::Event;
+use ::platform::device::Device;
+use ::platform::monitor::Event;
 
 pub struct DeviceMap {
-    map: HashMap<String, Device>,
+    map: HashMap<OsString, Device>
 }
 
 impl DeviceMap {
@@ -14,18 +15,18 @@ impl DeviceMap {
         Self { map: HashMap::new() }
     }
 
-    pub fn values_mut(&mut self) -> ValuesMut<String, Device> {
+    pub fn values_mut(&mut self) -> ValuesMut<OsString, Device> {
         self.map.values_mut()
     }
 
     pub fn process_event(&mut self, event: Event) {
         match event {
             Event::Add(path) => self.add(path),
-            Event::Remove(path) => self.remove(path),
+            Event::Remove(path) => self.remove(path)
         }
     }
 
-    fn add(&mut self, path: String) {
+    fn add(&mut self, path: OsString) {
         if self.map.contains_key(&path) {
             return;
         }
@@ -56,7 +57,7 @@ impl DeviceMap {
         }
     }
 
-    fn remove(&mut self, path: String) {
+    fn remove(&mut self, path: OsString) {
         // Ignore errors.
         let _ = self.map.remove(&path);
     }

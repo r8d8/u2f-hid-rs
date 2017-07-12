@@ -8,7 +8,7 @@ use std::os::unix::prelude::*;
 use consts::CID_BROADCAST;
 use platform::hidraw;
 use util::{from_unix_result, to_io_err};
-use u2f::U2FDevice;
+use u2fprotocol::U2FDevice;
 
 #[derive(Debug)]
 pub struct Device {
@@ -22,11 +22,7 @@ impl Device {
         let cstr = CString::new(path.as_bytes()).map_err(to_io_err)?;
         let fd = unsafe { libc::open(cstr.as_ptr(), libc::O_RDWR) };
         let fd = from_unix_result(fd)?;
-        Ok(Self {
-            path,
-            fd,
-            cid: CID_BROADCAST,
-        })
+        Ok(Self { path, fd, cid: CID_BROADCAST })
     }
 
     pub fn is_u2f(&self) -> bool {
