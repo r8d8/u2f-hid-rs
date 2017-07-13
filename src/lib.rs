@@ -33,6 +33,7 @@ mod runloop;
 pub mod u2f;
 pub use u2f::*;
 pub use manager::U2FManager;
+pub use self::util::*;
 
 mod c_api;
 pub use c_api::*;

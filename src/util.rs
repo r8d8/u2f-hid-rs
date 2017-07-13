@@ -1,9 +1,8 @@
 extern crate libc;
 
 use std::error::Error;
-use std::io;
+use std::{io, mem, slice};
 use std::sync::{Arc, Mutex};
-
 use boxfnonce::SendBoxFnOnce;
 
 macro_rules! try_or {
@@ -38,6 +37,28 @@ pub fn from_unix_result<T: Signed>(rv: T) -> io::Result<T> {
         Err(io::Error::from_raw_os_error(errno))
     } else {
         Ok(rv)
+    }
+}
+
+pub fn to_u8_array<T>(non_ptr: &T) -> &[u8] {
+    unsafe { slice::from_raw_parts(non_ptr as *const T as *const u8, mem::size_of::<T>()) }
+}
+
+pub fn from_u8_array<T>(arr: &[u8]) -> &T {
+    unsafe { &*(arr.as_ptr() as *const T) }
+}
+
+pub fn set_data(data: &mut [u8], itr: &mut slice::Iter<u8>, max: usize) {
+    let take_amount;
+    let count = itr.size_hint().0;
+    if max < count {
+        take_amount = max;
+    } else {
+        take_amount = count;
+    }
+    // TODO There is a better way to do this :|
+    for i in 0..take_amount {
+        data[i] = *itr.next().unwrap();
     }
 }
 

@@ -1,9 +1,10 @@
 extern crate std;
 
 use consts::*;
-use std::{ffi, mem, io, slice};
+use std::{ffi, io};
 use std::io::{Read, Write};
 use std::ffi::CString;
+use util::{to_u8_array, set_data, from_u8_array};
 
 use log;
 
@@ -71,32 +72,6 @@ struct U2FHIDInitResp {
 pub trait U2FDevice {
     fn get_cid(&self) -> [u8; 4];
     fn set_cid(&mut self, cid: &[u8; 4]);
-}
-
-////////////////////////////////////////////////////////////////////////
-// Utility Functions
-////////////////////////////////////////////////////////////////////////
-
-fn to_u8_array<T>(non_ptr: &T) -> &[u8] {
-    unsafe { slice::from_raw_parts(non_ptr as *const T as *const u8, mem::size_of::<T>()) }
-}
-
-fn from_u8_array<T>(arr: &[u8]) -> &T {
-    unsafe { &*(arr.as_ptr() as *const T) }
-}
-
-fn set_data(data: &mut [u8], itr: &mut std::slice::Iter<u8>, max: usize) {
-    let take_amount;
-    let count = itr.size_hint().0;
-    if max < count {
-        take_amount = max;
-    } else {
-        take_amount = count;
-    }
-    // TODO There is a better way to do this :|
-    for i in 0..take_amount {
-        data[i] = *itr.next().unwrap();
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -399,11 +374,11 @@ where
     Ok(data)
 }
 
-// https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
-// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#u2f-message-framing
+/// https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
+/// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#u2f-message-framing
 #[repr(packed)]
 #[allow(dead_code)]
-struct U2FAPDUHeader {
+pub struct U2FAPDUHeader {
     cla: u8,
     ins: u8,
     p1: u8,
@@ -427,12 +402,13 @@ where
             (send.len() & 0xff) as u8,
         ],
     };
-    // Size of header, plus data, plus 2 0 bytes at the end for maximum return
+    // Size of header, plus data, plus 2 0x00 bytes at the end for maximum return
     // size.
     let mut data_vec: Vec<u8> = vec![0; std::mem::size_of::<U2FAPDUHeader>() + send.len() + 2];
     let header_raw: &[u8] = to_u8_array(&header);
     data_vec[0..U2FAPDUHEADER_SIZE].clone_from_slice(&header_raw);
     data_vec[U2FAPDUHEADER_SIZE..(send.len() + U2FAPDUHEADER_SIZE)].clone_from_slice(&send);
+
     sendrecv(dev, U2FHID_MSG, &data_vec)
 }
 

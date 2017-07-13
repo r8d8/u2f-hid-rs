@@ -6,7 +6,7 @@ pub const U2FAPDUHEADER_SIZE: usize = 7;
 pub const CID_BROADCAST: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
 pub const TYPE_MASK: u8 = 0x80;
 pub const TYPE_INIT: u8 = 0x80;
-pub const TYPE_CONT: u8 = 0x80;
+pub const TYPE_CONT: u8 = 0x00;
 
 pub const PARAMETER_SIZE: usize = 32;
 
@@ -38,7 +38,7 @@ pub const U2F_VERSION: u8 = 0x03; // Read version string command
 
 // U2F_REGISTER command defines
 pub const U2F_REGISTER_ID: u8 = 0x05; // Version 2 registration identifier
-pub const U2F_REGISTER_HASH_ID: u8 = 0x00; // Version 2 hash identintifier
+pub const U2F_REGISTER_HASH_ID: u8 = 0x00; // Version 2 hash identifier
 
 // U2F_AUTHENTICATE command defines
 pub const U2F_REQUEST_USER_PRESENCE: u8 = 0x03; // Verify user presence and sign
