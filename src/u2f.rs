@@ -274,7 +274,7 @@ where
 // Device Communication Functions
 ////////////////////////////////////////////////////////////////////////
 
-fn sendrecv<T>(dev: &mut T, cmd: u8, send: &[u8]) -> io::Result<Vec<u8>>
+pub fn sendrecv<T>(dev: &mut T, cmd: u8, send: &[u8]) -> io::Result<Vec<u8>>
 where
     T: U2FDevice + Read + Write,
 {
@@ -386,7 +386,7 @@ pub struct U2FAPDUHeader {
     lc: [u8; 3],
 }
 
-fn send_apdu<T>(dev: &mut T, cmd: u8, p1: u8, send: &Vec<u8>) -> io::Result<Vec<u8>>
+pub fn send_apdu<T>(dev: &mut T, cmd: u8, p1: u8, send: &Vec<u8>) -> io::Result<Vec<u8>>
 where
     T: U2FDevice + Read + Write,
 {
