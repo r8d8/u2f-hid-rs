@@ -4,7 +4,7 @@ use consts::*;
 use std::{ffi, io};
 use std::io::{Read, Write};
 use std::ffi::CString;
-use util::{to_u8_array, set_data, from_u8_array};
+use util::{to_u8_array, set_data, from_u8_array, to_hex_string};
 
 use log;
 
@@ -126,7 +126,7 @@ pub fn u2f_version<T>(dev: &mut T) -> io::Result<std::ffi::CString>
 where
     T: U2FDevice + Read + Write,
 {
-    let mut version_resp = try!(send_apdu(dev, U2F_VERSION, 0x00, &vec![]));
+    let mut version_resp = try!(send_apdu(dev, 0x00, U2F_VERSION, 0x00, &vec![]));
     let sw_low = version_resp.pop().unwrap();
     let sw_high = version_resp.pop().unwrap();
 
@@ -174,6 +174,7 @@ where
 
     let register_resp = try!(send_apdu(
         dev,
+        0x00,
         U2F_REGISTER,
         flags | U2F_REQUEST_USER_PRESENCE,
         &register_data,
@@ -220,7 +221,7 @@ where
     sign_data.extend(key_handle);
 
     let flags = U2F_REQUEST_USER_PRESENCE;
-    let sign_resp = send_apdu(dev, U2F_AUTHENTICATE, flags, &sign_data)?;
+    let sign_resp = send_apdu(dev, 0x00, U2F_AUTHENTICATE, flags, &sign_data)?;
 
     if sign_resp.len() != 2 {
         // Real data, let's bail out here
@@ -263,7 +264,7 @@ where
     sign_data.extend(key_handle);
 
     let flags = U2F_CHECK_IS_REGISTERED;
-    let sign_resp = send_apdu(dev, U2F_AUTHENTICATE, flags, &sign_data)?;
+    let sign_resp = send_apdu(dev, 0x00, U2F_AUTHENTICATE, flags, &sign_data)?;
 
     // Need to use `&sign_resp[0..2]` here due to a compiler bug.
     // https://github.com/rust-lang/rust/issues/42031
@@ -310,7 +311,7 @@ where
 
         if log_enabled!(log::LogLevel::Trace) {
             let parts: Vec<String> = frame.iter().map(|byte| format!("{:02x}", byte)).collect();
-            trace!("USB send: {}", parts.join(""));
+            trace!("\t |- USB send: {}", parts.join(""));
         }
 
         if let Err(er) = dev.write(&frame) {
@@ -355,9 +356,11 @@ where
         let cont_frame: &U2FHIDCont = from_u8_array(&frame);
 
         if cont_frame.cid != dev.get_cid() {
+            trace!("Error: cont_frame.cid: {:?}, dev.get_cid(): {:?}", cont_frame.cid, dev.get_cid());
             return Err(io::Error::new(io::ErrorKind::Other, "Wrong CID!"));
         }
         if cont_frame.seq != sequence {
+            trace!("Error: cont_frame.seq: {:?}, sequence: {:?}", cont_frame.seq, sequence);
             return Err(io::Error::new(
                 io::ErrorKind::Other,
                 "Sequence numbers out of order!",
@@ -374,25 +377,25 @@ where
     Ok(data)
 }
 
-/// https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit
-/// https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#u2f-message-framing
+/// [https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit]
+/// [https://fidoalliance.org/specs/fido-u2f-v1.0-nfc-bt-amendment-20150514/fido-u2f-raw-message-formats.html#u2f-message-framing]
 #[repr(packed)]
 #[allow(dead_code)]
 pub struct U2FAPDUHeader {
-    cla: u8,
-    ins: u8,
-    p1: u8,
-    p2: u8,
-    lc: [u8; 3],
+    pub cla: u8,
+    pub ins: u8,
+    pub p1: u8,
+    pub p2: u8,
+    pub lc: [u8; 3],
 }
 
-pub fn send_apdu<T>(dev: &mut T, cmd: u8, p1: u8, send: &Vec<u8>) -> io::Result<Vec<u8>>
+pub fn send_apdu<T>(dev: &mut T, cla: u8, cmd: u8, p1: u8, send: &Vec<u8>) -> io::Result<Vec<u8>>
 where
     T: U2FDevice + Read + Write,
 {
     // TODO: Check send length to make sure it's < 2^16
     let header = U2FAPDUHeader {
-        cla: 0,
+        cla: cla,
         ins: cmd,
         p1: p1,
         p2: 0, // p2 is always 0, at least, for our requirements.
@@ -404,11 +407,12 @@ where
     };
     // Size of header, plus data, plus 2 0x00 bytes at the end for maximum return
     // size.
-    let mut data_vec: Vec<u8> = vec![0; std::mem::size_of::<U2FAPDUHeader>() + send.len() + 2];
+    let mut data_vec: Vec<u8> = vec![0; std::mem::size_of::<U2FAPDUHeader>() + send.len() ];
     let header_raw: &[u8] = to_u8_array(&header);
     data_vec[0..U2FAPDUHEADER_SIZE].clone_from_slice(&header_raw);
     data_vec[U2FAPDUHEADER_SIZE..(send.len() + U2FAPDUHEADER_SIZE)].clone_from_slice(&send);
 
+    println!(">> DEBUG from hidrs send_apdu: {:?}", to_hex_string(&data_vec));
     sendrecv(dev, U2FHID_MSG, &data_vec)
 }
 
@@ -450,7 +454,7 @@ mod tests {
                 let mut read: [u8; HID_RPT_SIZE] = [fill_value; HID_RPT_SIZE];
                 read[0..packet.len()].clone_from_slice(&packet);
                 self.expected_reads.push(read);
-            }
+             }
         }
 
         impl Write for TestDevice {
@@ -758,7 +762,7 @@ mod tests {
             ],
             0,
         );
-        assert!(send_apdu(&mut device, U2FHID_PING, 0xaa, &vec![1, 2, 3, 4, 5]).is_ok());
+        assert!(send_apdu(&mut device, 0x00, U2FHID_PING, 0xaa, &vec![1, 2, 3, 4, 5]).is_ok());
     }
 
     #[test]

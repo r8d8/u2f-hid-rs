@@ -17,7 +17,7 @@ use std::time::Duration;
 use libc::c_void;
 use core_foundation_sys::base::*;
 
-mod monitor;
+pub mod monitor;
 use self::monitor::Monitor;
 use std::collections::HashMap;
 use runloop::RunLoop;

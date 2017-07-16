@@ -21,6 +21,14 @@ pub enum QueueAction {
         key_handle: Vec<u8>,
         callback: OnceCallback,
     },
+    SendAPDU {
+        timeout: u64,
+        cla: u8,
+        cmd: u8,
+        p1: u8,
+        data: Vec<u8>,
+        callback: OnceCallback,
+    },
     Cancel,
 }
 
@@ -58,6 +66,17 @@ impl U2FManager {
                            }) => {
                             // This must not block, otherwise we can't cancel.
                             pm.sign(timeout, challenge, application, key_handle, callback);
+                        }
+                        Ok(QueueAction::SendAPDU {
+                               timeout,
+                               cla,
+                               cmd,
+                               p1,
+                               data,
+                               callback,
+                           }) => {
+                            // This must not block, otherwise we can't cancel.
+                            pm.send_apdu(timeout, cla, cmd, p1, data, callback);
                         }
                         Ok(QueueAction::Cancel) => {
                             // Cancelling must block so that we don't start a new
@@ -120,19 +139,19 @@ impl U2FManager {
         F: FnOnce(io::Result<Vec<u8>>),
         F: Send + 'static,
     {
-        if challenge.len() != PARAMETER_SIZE || application.len() != PARAMETER_SIZE {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Invalid parameter sizes",
-            ));
-        }
-
-        if key_handle.len() > 256 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Key handle too large",
-            ));
-        }
+//        if challenge.len() != PARAMETER_SIZE || application.len() != PARAMETER_SIZE {
+//            return Err(io::Error::new(
+//                io::ErrorKind::InvalidInput,
+//                "Invalid parameter sizes",
+//            ));
+//        }
+//
+//        if key_handle.len() > 256 {
+//            return Err(io::Error::new(
+//                io::ErrorKind::InvalidInput,
+//                "Key handle too large",
+//            ));
+//        }
 
         let callback = OnceCallback::new(callback);
         let action = QueueAction::Sign {
@@ -144,6 +163,25 @@ impl U2FManager {
         };
         self.tx.send(action).map_err(to_io_err)
     }
+
+    pub fn send_apdu<F>(&self, timeout: u64, cla: u8, cmd: u8, p1:u8, data: Vec<u8>, callback: F) -> io::Result<()>
+    where
+        F: FnOnce(io::Result<Vec<u8>>),
+        F: Send + 'static,
+    {
+        let callback = OnceCallback::new(callback);
+        let action = QueueAction::SendAPDU  {
+            timeout,
+            cla,
+            cmd,
+            p1,
+            data,
+            callback,
+        };
+
+        self.tx.send(action).map_err(to_io_err)
+    }
+
 
     pub fn cancel(&self) -> io::Result<()> {
         self.tx.send(QueueAction::Cancel).map_err(to_io_err)

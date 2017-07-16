@@ -25,13 +25,15 @@ extern crate rand;
 extern crate libc;
 extern crate boxfnonce;
 
-mod consts;
+pub mod consts;
 mod manager;
 mod runloop;
 
 // TODO
 pub mod u2f;
 pub use u2f::*;
+pub use platform::{Device, Monitor};
+pub use runloop::RunLoop;
 pub use manager::U2FManager;
 pub use self::util::*;
 

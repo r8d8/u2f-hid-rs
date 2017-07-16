@@ -31,7 +31,8 @@ fn main() {
 
     println!("Asking a security key to register now...");
     let mut challenge = Sha256::new();
-    challenge.input_str(r#"{"challenge": "1vQ9mxionq0ngCnjD-wTsv1zUSrGRtFqG2xP09SbZ70", "version": "U2F_V2", "appId": "http://demo.yubico.com"}"#);
+    challenge.input_str(r#"{"challenge": "1vQ9mxionq0ngCnjD-wTsv1zUSrGRtFqG2xP09SbZ70",
+                                "version": "U2F_V2", "appId": "http://demo.yubico.com"}"#);
     let mut chall_bytes: Vec<u8> = vec![0; challenge.output_bytes()];
     challenge.result(&mut chall_bytes);
 
@@ -53,6 +54,8 @@ fn main() {
     println!("Register result: {}", base64::encode(&register_data));
     println!("Asking a security key to sign now, with the data from the register...");
     let key_handle = u2f_get_key_handle_from_register_response(&register_data).unwrap();
+
+    println!("KeyHandle: {:?}", base64::encode(&key_handle));
 
     let (tx, rx) = channel();
     manager

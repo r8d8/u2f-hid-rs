@@ -3,16 +3,16 @@ use std::io;
 use std::thread;
 use std::time::Duration;
 
-mod device;
+pub mod device;
 mod devicemap;
-mod monitor;
+pub mod monitor;
 mod winapi;
 
 use consts::PARAMETER_SIZE;
 use runloop::RunLoop;
 
 use self::devicemap::DeviceMap;
-use self::monitor::Monitor;
+pub use self::monitor::Monitor;
 
 pub fn io_err(msg: &str) -> io::Error {
     io::Error::new(io::ErrorKind::Other, msg)
